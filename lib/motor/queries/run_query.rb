@@ -211,7 +211,7 @@ module Motor
       end
 
       def connection_class
-        defined?(ResourceRecord) ? ResourceRecord : ActiveRecord::Base
+        defined?(ResourceRecord) ? ResourceRecord : Motor::MetricDbDummy
       end
     end
   end
