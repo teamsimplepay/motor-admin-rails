@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module Motor
-  class ApplicationRecord < ActiveRecord::Base
+  class ApplicationRecord < SecondBase::Base
     self.abstract_class = true
-    self.table_name_prefix = 'motor_'
+    self.table_name_prefix = 'motor.'
 
     def self.audited(*args)
       default_class = Audited.audit_class

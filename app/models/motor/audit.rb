@@ -2,7 +2,7 @@
 
 module Motor
   class Audit < Audited::Audit
-    self.table_name = 'motor_audits'
+    self.table_name = "motor.audits"
 
     serialize :audited_changes, HashSerializer
   end
