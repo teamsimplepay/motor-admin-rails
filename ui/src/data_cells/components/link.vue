@@ -30,6 +30,15 @@ export default {
     }
   },
   computed: {
+    truncatedValue () {
+      const value = this.value.match(/^\/rails/) ? this.value.split('/').pop() : this.value
+
+      if (this.isTruncated) {
+        return value.slice(0, 60) + '...'
+      } else {
+        return value
+      }
+    },
     linkParams () {
       const params = {}
 
@@ -37,7 +46,7 @@ export default {
         params.target = '_blank'
         params.is = 'a'
         params.href = this.value
-      } else {
+      } else if (this.value.startsWith('/')) {
         const resolvedRoute = this.$router.resolve({ path: this.value }, this.$route)
 
         if (resolvedRoute?.name) {
@@ -47,6 +56,10 @@ export default {
           params.is = 'a'
           params.href = this.value
         }
+      } else {
+        params.is = 'a'
+        params.target = '_blank'
+        params.href = 'https://' + this.value
       }
 
       return params

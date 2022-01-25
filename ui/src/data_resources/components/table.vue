@@ -78,7 +78,7 @@
             @click="openFiltersModal"
           />
         </Badge>
-        <NewResourceButton
+        <CollectionActions
           class="ms-1"
           :model="model"
           :association="association"
@@ -159,7 +159,7 @@ import { modelNameMap } from '../scripts/schema'
 import DataTable from 'data_tables/components/table'
 import ResourceSearch from './search'
 import ResourceActions from './actions'
-import NewResourceButton from './new_button'
+import CollectionActions from './collection_actions'
 import FiltersModal from './filters_modal'
 
 import { widthLessThan } from 'utils/scripts/dimensions'
@@ -186,7 +186,7 @@ export default {
     DataTable,
     ResourceSearch,
     ResourceActions,
-    NewResourceButton,
+    CollectionActions,
     SettingsMask
   },
   props: {
@@ -239,7 +239,7 @@ export default {
       return this.model.actions.some((action) => action.name !== 'create' && action.visible)
     },
     defaultSortParams () {
-      if (this.model.primary_key && !this.model.custom_sql) {
+      if (this.model.primary_key && !this.model.custom_sql && !this.currentScope) {
         return {
           order: this.model.columns.find((c) => c.name === this.model.primary_key).column_type === 'integer' ? 'desc' : 'asc',
           key: this.model.primary_key
@@ -369,7 +369,7 @@ export default {
       return this.model.columns.map((column) => {
         if (column.reference?.model_name !== modelNameMap[this.resourceName].name &&
             ['read_only', 'read_write'].includes(column.access_type)) {
-          return {
+          const tableColumn = {
             key: column.name,
             title: column.display_name,
             reference: column.reference,
@@ -377,6 +377,13 @@ export default {
             sortable: !column.virtual,
             type: column.column_type
           }
+
+          if (column.column_type === 'association') {
+            tableColumn.format.association_model_name =
+              this.model.associations.find((assoc) => assoc.name === column.format.association_name).model_name
+          }
+
+          return tableColumn
         } else {
           return null
         }

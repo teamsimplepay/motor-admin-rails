@@ -94,5 +94,28 @@ module Motor
         ActiveStorage::Blob.singleton_class.prepend(Motor::ActiveRecordUtils::ActiveStorageBlobPatch)
       end
     end
+
+    initializer 'motor.upgrade' do
+      config.after_initialize do
+        next unless Motor.server?
+
+        unless Motor::Query.table_exists?
+          puts
+          puts '  => Run `rails g motor:install && rake db:migrate` in order to create Motor Admin configuration tables'
+          puts
+
+          raise
+        end
+
+        unless Motor::ApiConfig.table_exists?
+          puts
+          puts '  => Run `rails g motor:upgrade && rake db:migrate`' \
+               ' to perform data migration and enable the latest features'
+          puts
+
+          raise
+        end
+      end
+    end
   end
 end

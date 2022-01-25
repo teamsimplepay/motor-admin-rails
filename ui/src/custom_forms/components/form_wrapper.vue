@@ -11,10 +11,14 @@
         :data="formData"
         :with-submit="!withFooterSubmit"
         :with-success-message="withSuccessMessage"
+        :with-go-back="withGoBack"
+        :exclude-fields="excludeFields"
+        :submit-button-size="submitButtonSize"
         @success="onSuccess"
         @error="$emit('error', $event)"
         @reset="resetData"
         @submit="$emit('submit', $event)"
+        @back="$emit('back')"
       />
       <div
         v-if="withFooterSubmit && !isSuccess"
@@ -23,7 +27,7 @@
         <VButton
           type="primary"
           long
-          size="large"
+          :size="submitButtonSize"
           style="position: sticky; bottom: 0"
           @click="submit"
         >
@@ -69,12 +73,32 @@ export default {
       default: true
     },
     formId: {
-      type: Number,
+      type: [String, Number],
       required: false,
       default: null
+    },
+    triggerRequest: {
+      type: Boolean,
+      required: false,
+      default: true
+    },
+    excludeFields: {
+      type: Array,
+      required: false,
+      default: () => ([])
+    },
+    submitButtonSize: {
+      type: String,
+      required: false,
+      default: 'large'
+    },
+    withGoBack: {
+      type: Boolean,
+      required: false,
+      default: false
     }
   },
-  emits: ['submit', 'success', 'error', 'loaded'],
+  emits: ['submit', 'success', 'error', 'loaded', 'submitData', 'back'],
   data () {
     return {
       formData: {},
@@ -131,7 +155,17 @@ export default {
   },
   methods: {
     submit () {
-      this.$refs.form.handleSubmit()
+      if (this.triggerRequest) {
+        this.$refs.form.handleSubmit()
+      } else {
+        this.$refs.form.validate((valid) => {
+          if (valid) {
+            this.$emit('submitData', this.formData)
+          } else {
+            this.$refs.form.scrollToErrors()
+          }
+        })
+      }
     },
     assignInitialDataVariablesWatchers () {
       this.intialDataVariables.forEach(variable => {
@@ -164,24 +198,39 @@ export default {
       if (this.dataForm.preferences.default_values_api_path && hasVariablesSet) {
         const path = interpolate(this.dataForm.preferences.default_values_api_path, this.customFormComponentData)
 
-        return loadCredentials().then((credentials) => {
-          return axios.get(path, {
-          }, {
-            headers: {
-              ...this.headers,
-              ...credentials.headers
-            }
-          }).then((result) => {
-            this.formData = { ...this.data, ...result.data }
-          }).catch((error) => {
-            console.error(error)
+        let request
 
-            if (error.response.data?.errors) {
-              this.$Message.error(truncate(error.response.data.errors.join('\n'), 70))
-            } else {
-              this.$Message.error(this.i18n.unable_to_load_form_data)
+        if (this.dataForm.api_config_name !== 'origin') {
+          request = api.get('run_api_request', {
+            params: {
+              data: {
+                api_config_name: this.dataForm.api_config_name,
+                path: path
+              }
             }
           })
+        } else {
+          request = loadCredentials().then((credentials) => {
+            return axios.get(path, {
+            }, {
+              headers: {
+                ...this.headers,
+                ...credentials.headers
+              }
+            })
+          })
+        }
+
+        return request.then((result) => {
+          this.formData = { ...this.data, ...result.data }
+        }).catch((error) => {
+          console.error(error)
+
+          if (error.response.data?.errors) {
+            this.$Message.error(truncate(error.response.data.errors.join('\n'), 70))
+          } else {
+            this.$Message.error(this.i18n.unable_to_load_form_data)
+          }
         })
       } else {
         return Promise.resolve({})

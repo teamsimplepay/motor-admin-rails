@@ -286,3 +286,19 @@ en:
     slash: Slash
     sql: SQL
     api: API
+    searchable_columns: Searchable columns
+    validate: Validate
+    error_message: Error message
+    validation_regexp: Validation RegExp
+    regexp: RegExp
+    message: Message
+    should_be_a_valid_regexp: Should be a valid RegExp string
+    order_by: Order by
+    ascending: Ascending
+    descending: Descending
+    url: URL
+    expand: Expand
+    add_api: Add API
+    on_collection: On collection
+    association: Association
+    action_has_been_removed: This action has been removed

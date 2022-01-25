@@ -13,16 +13,21 @@ function buildColumnValidator (column, resource) {
     return []
   }
 
-  const validators = column.validators.map((validator) => {
+  const validators = (column.validators || []).map((validator) => {
     if (validator.required) {
       return {
         required: true,
         message: i18nDict.field_is_required.replace('%{field}', column.display_name)
       }
     } else if (validator.format) {
+      const regexp = validator.format.source
+        ? new RegExp(validator.format.source, validator.format.options)
+        : new RegExp(validator.format)
+
       return {
-        pattern: new RegExp(validator.format.source, validator.format.options),
-        message: i18nDict.field_value_does_not_match_pattern.replace('%{field}', column.display_name).replace('%{pattern}', validator.format.source)
+        pattern: regexp,
+        message: validator.message || i18nDict.field_value_does_not_match_pattern.replace('%{field}', column.display_name).replace('%{pattern}', validator.format.source),
+        trigger: 'blur'
       }
     } else if (validator.includes) {
       return {
@@ -58,11 +63,15 @@ function buildColumnValidator (column, resource) {
   }).filter(Boolean).flat()
 
   if (column.name === 'email') {
-    validators.push({ type: 'email' })
+    validators.push({ type: 'email', trigger: 'blur' })
   }
 
   if (isJsonColumn(column, resource)) {
-    validators.push({ validator: Validators.json, fullField: column.display_name })
+    validators.push({
+      validator: Validators.json,
+      fullField: column.display_name,
+      trigger: 'blur'
+    })
   }
 
   if (!column.reference && ['integer', 'float'].includes(column.column_type)) {

@@ -119,15 +119,26 @@
         style="height: calc(100% - 64px)"
       >
         <div
-          class="p-3 bg-white"
+          class="p-3 bg-white d-flex"
           :class="{ 'border-bottom': !data.length && !errors.length }"
         >
+          <ApiSelect
+            v-model="dataQuery.preferences.api_config_name"
+            class="w-50 pe-1"
+          />
           <VInput
             v-model="dataQuery.preferences.api_path"
-            class="w-100"
+            class="w-50 ps-1"
             :placeholder="i18n.api_path"
             @keyup.enter="loadQueryData"
           />
+          <VButton
+            icon="md-settings"
+            class="ms-2"
+            @click="toggleSettings"
+          >
+            {{ i18n.settings }}
+          </VButton>
         </div>
         <div class="h-100 position-relative">
           <Spin
@@ -234,6 +245,7 @@ import { widthLessThan } from 'utils/scripts/dimensions'
 import { modelNameMap } from 'data_resources/scripts/schema'
 import { queriesStore } from 'reports/scripts/store'
 import RevisionsModal from 'utils/components/revisions_modal'
+import ApiSelect from 'api_configs/components/select'
 
 import api from 'api'
 import { loadApiQuery } from '../scripts/api_query'
@@ -259,7 +271,8 @@ export default {
     CodeEditor,
     QueryResult,
     Settings,
-    VariablesForm
+    VariablesForm,
+    ApiSelect
   },
   data () {
     return {
@@ -372,7 +385,9 @@ export default {
       }
     },
     'dataQuery.sql_body': throttle(async function (value) {
-      this.assignVariablesFromSql(value)
+      if (this.dataQuery.preferences.query_type !== 'api') {
+        this.assignVariablesFromSql(value)
+      }
     }, 500),
     'dataQuery.preferences.visualization' (value) {
       if (value === 'markdown') {
@@ -650,8 +665,10 @@ export default {
           this.columns = result.columns || []
           this.dataHTML = result.dataHTML || ''
         }).catch((error) => {
+          console.error(error)
+
           if (error.response) {
-            this.errors = error.response.data?.errors
+            this.errors = error.response?.data?.errors || [error.message]
           } else {
             this.$Message.error(error.message)
           }
@@ -673,7 +690,7 @@ export default {
           this.columns = result.data.meta.columns
         }).catch((error) => {
           if (error.response) {
-            this.errors = error.response.data?.errors
+            this.errors = error.response.data?.errors || [error.message]
           } else {
             this.$Message.error(error.message)
           }

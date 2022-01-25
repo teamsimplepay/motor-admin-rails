@@ -19,16 +19,17 @@
     v-else-if="column.reference && column.reference.model_name"
     :model-value="modelValue"
     :resource-name="column.reference.model_name"
-    :selected-resource="formData ? formData[column.reference.name] : null"
+    :selected-resource="formData && !column.is_array ? formData[column.reference.name] : null"
+    :selected-resources="formData && column.is_array ? formData[column.reference.name] : null"
     :multiple="column.is_array"
     :primary-key="column.reference.primary_key"
     @update:model-value="$emit('update:modelValue', $event)"
     @select="onSelect"
   />
   <QueryValueSelect
-    v-else-if="type === 'select' && column.select_query_id"
+    v-else-if="type === 'select' && selectQueryId"
     :model-value="modelValue"
-    :query-id="column.select_query_id"
+    :query-id="selectQueryId"
     :form-data="formData"
     :multiple="column.is_array"
     @update:modelValue="$emit('update:modelValue', $event)"
@@ -36,12 +37,12 @@
   />
   <MSelect
     v-else-if="isTagSelect"
-    :model-value="modelValue"
+    :model-value="dataValue"
     :options="tagOptions"
     :allow-create="!tagOptions.length"
-    :multiple="column.is_array"
+    :multiple="column.is_array || !!column.format?.split_tags_by"
     :label-function="tagOptions.length ? (option) => titleize(option.value.toString()) : (option) => option.value.toString()"
-    @update:modelValue="$emit('update:modelValue', $event)"
+    @update:modelValue="$emit('update:modelValue', column.format?.split_tags_by ? $event.join(column.format.split_tags_by) : $event)"
     @select="onSelect"
   />
   <OptionsInput
@@ -125,6 +126,9 @@ export default {
     }
   },
   computed: {
+    selectQueryId () {
+      return this.column.select_query_id || this.column.format?.select_query_id
+    },
     valueType () {
       return typeof this.modelValue
     },
@@ -172,8 +176,14 @@ export default {
     }
   },
   created () {
-    if (this.modelValue && (this.isDateTime || this.isDate)) {
-      this.dataValue = new Date(new Date(this.modelValue).getTime())
+    if (this.modelValue) {
+      if (this.isDateTime) {
+        this.dataValue = new Date(new Date(this.modelValue).getTime())
+      } else if (this.isDate) {
+        this.dataValue = new Date(new Date(this.modelValue).getTime() + new Date().getTimezoneOffset() * 60000)
+      } else if (this.isTagSelect && this.column.format?.split_tags_by) {
+        this.dataValue = this.modelValue.split(this.column.format.split_tags_by).map((e) => e.trim())
+      }
     }
   },
   methods: {
@@ -207,14 +217,14 @@ export default {
     },
     onNumberUpdate (value) {
       if (this.type === 'currency' && this.column.format?.currency_base === 'cents') {
-        this.$emit('update:modelValue', value * 100)
+        this.$emit('update:modelValue', Math.floor(value * 10 ** 8) / 10 ** 6)
       } else {
         this.$emit('update:modelValue', value)
       }
     },
     maybeAdjustCurrencyNumber (value) {
       if (this.type === 'currency' && this.column.format?.currency_base === 'cents') {
-        return value / 100
+        return Math.floor(value * 10 ** 6) / 10 ** 8
       } else {
         return value
       }

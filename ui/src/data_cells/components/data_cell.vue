@@ -4,6 +4,7 @@
     ref="cell"
     :value="stringValue"
     :display-time="type !== 'date'"
+    :is-date="type === 'date'"
   />
   <DataRichtext
     v-else-if="isRichtext"
@@ -218,7 +219,7 @@ export default {
       return this.type === 'richtext'
     },
     isUrl () {
-      return !!this.stringValue.match(/^https?:\/\//i)
+      return this.type === 'link' || !!this.stringValue.match(/^https?:\/\//i)
     },
     isPath () {
       return !!this.stringValue.match(/^\/[^\s]+$/i)

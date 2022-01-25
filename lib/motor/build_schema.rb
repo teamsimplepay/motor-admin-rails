@@ -70,6 +70,7 @@ module Motor
 
     ACTION_DEFAULTS = {
       visible: true,
+      apply_on: 'member',
       preferences: {}
     }.with_indifferent_access
 
@@ -113,3 +114,4 @@ require_relative './build_schema/merge_schema_configs'
 require_relative './build_schema/apply_permissions'
 require_relative './build_schema/utils'
 require_relative './build_schema/defaults'
+require_relative './build_schema/find_searchable_columns'

@@ -61,7 +61,9 @@ ActiveRecord::Schema.define(version: 20_200_714_081_950) do
     t.string 'filename', null: false
     t.string 'content_type'
     t.text 'metadata'
-    t.string 'service_name', null: false if Rails::VERSION::MAJOR >= 6 && Rails::VERSION::MINOR >= 1
+    if Rails::VERSION::MAJOR >= 7 || (Rails::VERSION::MAJOR == 6 && Rails::VERSION::MINOR >= 1)
+      t.string 'service_name', null: false
+    end
     t.bigint 'byte_size', null: false
     t.string 'checksum', null: false
     t.datetime 'created_at', null: false
@@ -213,9 +215,22 @@ ActiveRecord::Schema.define(version: 20_200_714_081_950) do
     t.datetime 'deleted_at'
     t.datetime 'created_at', null: false
     t.datetime 'updated_at', null: false
+    t.string 'api_config_name', null: false
     t.index 'name', name: 'motor_forms_name_unique_index', unique: true,
                     where: '(deleted_at IS NULL)'
     t.index ['updated_at'], name: 'index_motor_forms_on_updated_at'
+  end
+
+  create_table 'motor_api_configs', force: :cascade do |t|
+    t.string 'name', null: false
+    t.string 'url', null: false
+    t.text 'preferences', null: false
+    t.text 'credentials', null: false
+    t.text 'description'
+    t.datetime 'deleted_at', precision: 6
+    t.datetime 'created_at', precision: 6, null: false
+    t.datetime 'updated_at', precision: 6, null: false
+    t.index ['name'], name: 'motor_api_configs_name_unique_index', unique: true, where: '(deleted_at IS NULL)'
   end
 
   create_table 'motor_queries', force: :cascade do |t|

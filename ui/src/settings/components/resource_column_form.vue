@@ -72,6 +72,19 @@
           </FormItem>
         </div>
       </div>
+      <FormItem
+        v-if="['association'].includes(dataColumn.column_type)"
+        :label="i18n['association']"
+        prop="format.association"
+      >
+        <MSelect
+          v-model="dataColumn.format.association_name"
+          :with-deselect="false"
+          label-key="display_name"
+          value-key="name"
+          :options="model.associations"
+        />
+      </FormItem>
       <ReferenceForm
         v-if="dataColumn.access_type !== 'hidden' && ['reference'].includes(dataColumn.column_type) && dataColumn.reference && dataColumn.reference.virtual"
         :resource-name="resourceName"
@@ -94,6 +107,13 @@
             {{ i18n.load_existing_options_from_database }}
           </VButton>
         </div>
+      </FormItem>
+      <FormItem
+        v-if="dataColumn.column_type === 'select'"
+        :label="i18n['select_query']"
+        prop="format.select_query_id"
+      >
+        <QuerySelect v-model="dataColumn.format.select_query_id" />
       </FormItem>
       <FormItem
         v-if="dataColumn.column_type === 'link'"
@@ -122,6 +142,34 @@
         <FormInput
           v-model="dataColumn.default_value"
           :column="dataColumn"
+        />
+      </FormItem>
+      <Checkbox
+        v-if="['read_write', 'write_only'].includes(dataColumn.access_type) && !dataColumn.reference && !['association'].includes(dataColumn.column_type)"
+        :model-value="!!customValidator"
+        class="mb-3"
+        @update:modelValue="toggleCustomValidator"
+      >
+        {{ ' ' }} {{ i18n['validate'] }}
+      </Checkbox>
+      <FormItem
+        v-if="customValidator"
+        :label="i18n['validation_regexp']"
+        :prop="`validators.${dataColumn.validators.length - 1}.format`"
+        :rules="validatorRegexpRule"
+      >
+        <VInput
+          v-model="customValidator.format"
+        />
+      </FormItem>
+      <FormItem
+        v-if="customValidator"
+        :label="i18n['error_message']"
+        :prop="`validators.${dataColumn.validators.length - 1}.message`"
+        :rules="validatorMessageRule"
+      >
+        <VInput
+          v-model="customValidator.message"
         />
       </FormItem>
     </VForm>
@@ -159,6 +207,7 @@ import Validators from 'utils/scripts/validators'
 import CurrencySelect from 'utils/components/currency_select'
 import OptionsInput from 'utils/components/options_input'
 import ReferenceForm from './resource_reference_form'
+import QuerySelect from 'queries/components/select'
 import { fieldRequiredMessage } from 'utils/scripts/i18n'
 import { modelNameMap } from 'data_resources/scripts/schema'
 import { underscore } from 'utils/scripts/string'
@@ -170,7 +219,8 @@ export default {
     FormInput,
     CurrencySelect,
     OptionsInput,
-    ReferenceForm
+    ReferenceForm,
+    QuerySelect
   },
   props: {
     column: {
@@ -195,6 +245,9 @@ export default {
     }
   },
   computed: {
+    model () {
+      return modelNameMap[this.resourceName]
+    },
     rules () {
       const rules = {
         display_name: [{
@@ -216,7 +269,20 @@ export default {
         rules['reference.primary_key'] = [{ required: true, message: fieldRequiredMessage('primary_key') }]
       }
 
+      if (this.dataColumn.column_type === 'association') {
+        rules['format.association_name'] = [{ required: true, message: fieldRequiredMessage('association') }]
+      }
+
       return rules
+    },
+    validatorRegexpRule () {
+      return [
+        { required: true, message: fieldRequiredMessage('regexp') },
+        { validator: Validators.regexp, fullField: this.i18n.regexp }
+      ]
+    },
+    validatorMessageRule () {
+      return [{ required: true, message: fieldRequiredMessage('message') }]
     },
     currencyBaseOptions () {
       return [
@@ -230,6 +296,7 @@ export default {
         { label: this.i18n.integer, value: 'integer' },
         { label: this.i18n.decimal, value: 'float' },
         { label: this.i18n.reference, value: 'reference' },
+        { label: this.i18n.association, value: 'association' },
         { label: this.i18n.date_and_time, value: 'datetime' },
         { label: this.i18n.date, value: 'date' },
         { label: this.i18n.boolean, value: 'boolean' },
@@ -240,6 +307,7 @@ export default {
         { label: this.i18n.change, value: 'change' },
         { label: this.i18n.chart, value: 'chart' },
         { label: this.i18n.tag, value: 'tag' },
+        { label: this.i18n.select, value: 'select' },
         { label: this.i18n.link, value: 'link' },
         { label: this.i18n.color, value: 'color' },
         { label: this.i18n.image, value: 'image' },
@@ -248,6 +316,9 @@ export default {
         { label: this.i18n.file, value: 'file' },
         { label: this.i18n.json, value: 'json' }
       ]
+    },
+    customValidator () {
+      return this.dataColumn.validators.find((validator) => 'message' in validator)
     },
     accessTypes () {
       return [
@@ -281,6 +352,13 @@ export default {
     this.dataColumn = this.normalizeDataColumn()
   },
   methods: {
+    toggleCustomValidator () {
+      if (this.customValidator) {
+        this.dataColumn.validators = [...this.column.validators.filter((v) => !('message' in v))]
+      } else {
+        this.dataColumn.validators.push({ format: '', message: '' })
+      }
+    },
     assignDefaultData () {
       if (this.column.reference) {
         if (this.column.reference.virtual) {
@@ -321,7 +399,7 @@ export default {
       return dataColumn
     },
     loadSelectOptions () {
-      const sqlBody = `SELECT DISTINCT(${this.dataColumn.name}) FROM ${modelNameMap[this.resourceName].table_name}`
+      const sqlBody = `SELECT DISTINCT(${this.dataColumn.name}) FROM ${this.model.table_name}`
 
       api.post('run_queries', {
         sql_body: sqlBody
